@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image-Only Frontend</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .hero-section {
+            height: 600px;
+            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://source.unsplash.com/1600x900/?nature') center/cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 40px 0;
+        }
+
+        .gallery-item {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.05);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+        }
+
+        .feature-section {
+            background: white;
+            padding: 60px 0;
+            border-radius: 20px;
+            margin: 40px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-section img {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Hero Section with Background Image -->
+        <section class="hero-section">
+            <h1>Discover Through Images</h1>
+            <p>Experience the world through beautiful visuals</p>
+        </section>
+
+        <!-- Gallery Section -->
+        <section class="gallery">
+            <div class="gallery-item">
+                <img src="https://source.unsplash.com/800x600/?technology" alt="Technology">
+            </div>
+            <div class="gallery-item">
+                <img src="https://source.unsplash.com/800x600/?travel" alt="Travel">
+            </div>
+            <div class="gallery-item">
+                <img src="https://source.unsplash.com/800x600/?food" alt="Food">
+            </div>
+            <div class="gallery-item">
+                <img src="https://source.unsplash.com/800x600/?architecture" alt="Architecture">
+            </div>
+        </section>
+
+        <!-- Feature Section -->
+        <section class="feature-section">
+            <img src="https://source.unsplash.com/1200x800/?lifestyle" alt="Lifestyle">
+        </section>
+    </div>
+</body>
+</html>
