@@ -1,30 +1,60 @@
 <?php
+require_once '../backend/config/database.php';
+require_once '../backend/models/Appointment.php';
+
+// Initialize variables to store any error/success messages
+$message = '';
+$messageType = '';
+
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    // Get form data
     $firstName = $_POST['first_name'];
     $lastName = $_POST['last_name'];
     $contactNumber = $_POST['contact_number'];
     $email = $_POST['email'];
     $reason = $_POST['reason'];
-    $appointment_date = $_POST['selected_date'];
-    $appointment_time = $_POST['selected_time'];
+    $appointmentDate = $_POST['selected_date'];
+    $appointmentTime = $_POST['selected_time'];
 
-    $doctor = "Dr. Michael Rivera";
-    $department = "General Dermatology";
+    // Set default staff ID (you can modify this to let users select a doctor)
+    $staffId = 1; // Default to first doctor in the system
 
-    $booked_on = $appointment_date; // Set booked on same as selected date
+    // Format patient data
+    $patientData = [
+        'first_name' => $firstName,
+        'last_name' => $lastName,
+        'phone' => $contactNumber,
+        'email' => $email
+    ];
 
-    $entry = "$firstName|$lastName|$contactNumber|$email|$appointment_date|$appointment_time|$doctor|$department|$reason|$booked_on";
+    // Format appointment data
+    $appointmentData = [
+        'staff_id' => $staffId,
+        'appointment_date' => $appointmentDate,
+        'appointment_time' => $appointmentTime,
+        'reason' => $reason
+    ];
 
-    file_put_contents("appointments.txt", $entry . PHP_EOL, FILE_APPEND);
+    try {
+        // Connect to database
+        $database = getDbConnection();
+        $appointment = new Appointment($database);
 
-    // echo "<script>alert('Appointment booked successfully!');window.location.href = 'appointmentdetails.php?id=$contactNumber';</script>";
+        // Book appointment
+        $result = $appointment->bookAppointment($patientData, $appointmentData);
 
-    // After saving the new appointment data
-    $newContactNumber = $_POST['contact']; // Get the contact number that was submitted
-
-    // Redirect to the appointment details page for that patient
-    header("Location: appointment_details.php?contact=" . urlencode($newContactNumber));
-    exit(); // Make sure to stop further execution to avoid any unwanted output
+        if ($result['success']) {
+            // Redirect to appointment details page
+            header("Location: appointmentdetails.php?id=" . $result['appointment_id']);
+            exit();
+        } else {
+            $messageType = 'error';
+            $message = 'Failed to book appointment: ' . $result['error'];
+        }
+    } catch (Exception $e) {
+        $messageType = 'error';
+        $message = 'An error occurred: ' . $e->getMessage();
+    }
 }
 ?>
 
@@ -125,7 +155,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 <!-- form -->
                 <div class="form-div">
                     <h2>Input Details</h2>
-                    <form action="book_appointment.php" method="POST" onsubmit="return attachDateTime()">
+                    <form action="book-appointment.php" method="POST" onsubmit="return attachDateTime()">
                         <div class="form-group">
                             <label for="first-name">First Name</label>
                             <input type="text" id="first-name" name="first_name" required placeholder="Placeholder">
