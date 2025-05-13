@@ -29,12 +29,23 @@ if (file_exists($file)) {
                 'appointment_date' => $fields[4],   // Appointment date
                 'appointment_time' => $fields[5],   // Appointment time
                 'doctor' => $fields[6],       // Doctor's name
-                'department' => $fields[7],   // Department
                 'reason' => $fields[8],       // Reason for appointment
                 'booked_on' => $fields[9],    // Date when the appointment was booked
                 'raw' => $line,               // Raw line from file
                 'status' => 'Upcoming'        // Default status
             ];
+
+            // Update status based on appointment date
+            $appointmentDate = strtotime($appointment['appointment_date']);
+            $currentDate = strtotime(date('Y-m-d'));
+            
+            if ($appointmentDate < $currentDate) {
+                $appointment['status'] = 'Completed';
+            } else if ($appointmentDate == $currentDate) {
+                $appointment['status'] = 'Today';
+            } else {
+                $appointment['status'] = 'Upcoming';
+            }
 
             // Check if this is the most recent appointment for this patient
             if (!isset($latestByPatient[$key]) || strtotime($appointment['booked_on']) > strtotime($latestByPatient[$key]['booked_on'])) {
@@ -52,6 +63,13 @@ if (file_exists($file)) {
 
     // Now $appointments holds the latest appointment per patient
     $appointments = array_values($latestByPatient);
+
+    // Sort history array by appointment date and time in descending order
+    usort($history, function($a, $b) {
+        $dateA = strtotime($a['appointment_date'] . ' ' . $a['appointment_time']);
+        $dateB = strtotime($b['appointment_date'] . ' ' . $b['appointment_time']);
+        return $dateB - $dateA; // Descending order (latest first)
+    });
 }
 ?>
 
@@ -206,12 +224,12 @@ $preslink = "addprescription.php?patient=$patientName&doctor=$doctor&date=$date&
                     </div>
 
                     <!-- Topbar Search -->
-                    <form class="d-none d-sm-inline-block form-inline ml-auto my-2 my-md-0 mw-100 navbar-search">
+                    <form class="d-none d-sm-inline-block form-inline ml-auto my-2 my-md-0 mw-100 navbar-search" onsubmit="return false;">
                         <div class="input-group">
-                            <input type="text" class="form-control bg-light border-0 small" placeholder="Search for..."
-                                aria-label="Search" aria-describedby="basic-addon2">
+                            <input type="text" class="form-control bg-light border-0 small" placeholder="Search appointments..."
+                                aria-label="Search" aria-describedby="basic-addon2" id="searchInput">
                             <div class="input-group-append">
-                                <button class="btn btn-primary" type="button">
+                                <button class="btn btn-primary" type="button" onclick="searchAppointments()">
                                     <i class="fas fa-search fa-sm"></i>
                                 </button>
                             </div>
@@ -250,11 +268,11 @@ $preslink = "addprescription.php?patient=$patientName&doctor=$doctor&date=$date&
                                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                 <i class="fas fa-bell fa-fw"></i>
                                 <!-- Counter - Alerts -->
-                                <span class="badge badge-danger badge-counter">3+</span>
+                                <span class="badge badge-danger badge-counter" id="notificationCounter">3+</span>
                             </a>
                             <!-- Dropdown - Alerts -->
                             <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in"
-                                aria-labelledby="alertsDropdown">
+                                aria-labelledby="alertsDropdown" id="alertsDropdownMenu">
                                 <h6 class="dropdown-header">
                                     Alerts Center
                                 </h6>
@@ -402,10 +420,6 @@ $preslink = "addprescription.php?patient=$patientName&doctor=$doctor&date=$date&
                                                 <div class="col pr-3">
                                                     <div class="row">Doctor Assigned</div>
                                                     <div class="row font-weight-bold text-primary"><?= $a['doctor'] ?></div>
-                                                </div>
-                                                <div class="col pr-3">
-                                                    <div class="row">Department</div>
-                                                    <div class="row font-weight-bold text-primary"><?= $a['department'] ?></div>
                                                 </div>
                                                 <div class="col">
                                                     <div class="row">Reason for Visit</div>
@@ -581,17 +595,27 @@ $preslink = "addprescription.php?patient=$patientName&doctor=$doctor&date=$date&
                                         </div>
                                         <div class="card-body p-3">
                                             <div class="list-group list-group-flush small">
-                                                <?php foreach ($history as $h): ?>
-                                                    <div class="list-group-item d-flex justify-content-between align-items-center px-0 border-0 pb-2">
-                                                        <div>
-                                                            <div class="text-muted"><?= htmlspecialchars($h['appointment_date']) ?></div>
-                                                            <div class="font-weight-bold"><?= htmlspecialchars($h['appointment_time']) ?></div>
+                                                <?php if (!empty($history)): ?>
+                                                    <?php foreach ($history as $h): ?>
+                                                        <div class="list-group-item d-flex justify-content-between align-items-center px-0 border-0 pb-2">
+                                                            <div>
+                                                                <div class="text-muted"><?= htmlspecialchars($h['appointment_date']) ?></div>
+                                                                <div class="font-weight-bold"><?= htmlspecialchars($h['appointment_time']) ?></div>
+                                                                <div class="small text-muted">Dr. <?= htmlspecialchars($h['doctor']) ?></div>
+                                                            </div>
+                                                            <div class="text-right">
+                                                                <button type="" class="btn btn-blue text-white hover-blue mb-2" style="font-size: 12px;">
+                                                                    <?= htmlspecialchars($h['reason']) ?>
+                                                                </button>
+                                                                <div class="small text-muted">
+                                                                    Status: <span class="font-weight-bold"><?= htmlspecialchars($h['status']) ?></span>
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                        <button type="" class="btn btn-blue text-white hover-blue" style="font-size: 12px;">
-                                                            <?= htmlspecialchars($h['reason']) ?>
-                                                        </button>
-                                                    </div>
-                                                <?php endforeach; ?>
+                                                    <?php endforeach; ?>
+                                                <?php else: ?>
+                                                    <div class="text-center text-muted py-3">No appointment history found.</div>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                                         <?php if (count($history) > 10): ?>
@@ -689,6 +713,16 @@ $preslink = "addprescription.php?patient=$patientName&doctor=$doctor&date=$date&
                 return;
             }
 
+            // Validate that the selected date is not in the past
+            const selectedDate = new Date(selectedOverlayDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (selectedDate < today) {
+                alert("Cannot schedule appointments in the past.");
+                return;
+            }
+
             fetch("update_booked_on.php", {
                     method: "POST",
                     headers: {
@@ -705,6 +739,10 @@ $preslink = "addprescription.php?patient=$patientName&doctor=$doctor&date=$date&
                             alert("Failed to update: " + msg);
                         });
                     }
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("An error occurred while updating the appointment.");
                 });
 
             document.getElementById("overlay").style.display = "none";
@@ -846,7 +884,117 @@ $preslink = "addprescription.php?patient=$patientName&doctor=$doctor&date=$date&
         });
     </script>
 
+    <script>
+        function searchAppointments() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const appointmentCards = document.querySelectorAll('.card.shadow.mb-4');
+            const historyItems = document.querySelectorAll('.list-group-item');
+            let foundAny = false;
 
+            // Search in current appointment
+            appointmentCards.forEach(card => {
+                const cardText = card.textContent.toLowerCase();
+                if (cardText.includes(searchQuery)) {
+                    card.style.display = '';
+                    foundAny = true;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // Search in appointment history
+            historyItems.forEach(item => {
+                const itemText = item.textContent.toLowerCase();
+                if (itemText.includes(searchQuery)) {
+                    item.style.display = '';
+                    foundAny = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Show/hide "no results" message
+            const noResultsMsg = document.getElementById('noResultsMessage');
+            if (!foundAny) {
+                if (!noResultsMsg) {
+                    const msg = document.createElement('div');
+                    msg.id = 'noResultsMessage';
+                    msg.className = 'alert alert-info text-center mt-3';
+                    msg.textContent = 'No appointments found matching your search.';
+                    document.querySelector('.container-fluid').appendChild(msg);
+                }
+            } else {
+                if (noResultsMsg) {
+                    noResultsMsg.remove();
+                }
+            }
+        }
+
+        // Add event listener for Enter key
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchAppointments();
+            }
+        });
+
+        // Add event listener for input changes to clear results when search is empty
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            if (e.target.value === '') {
+                // Show all appointments and history items
+                document.querySelectorAll('.card.shadow.mb-4, .list-group-item').forEach(item => {
+                    item.style.display = '';
+                });
+                // Remove no results message if it exists
+                const noResultsMsg = document.getElementById('noResultsMessage');
+                if (noResultsMsg) {
+                    noResultsMsg.remove();
+                }
+            }
+        });
+    </script>
+
+    <!-- Add this before the closing </body> tag -->
+    <script>
+        // Existing scripts...
+
+        // Notification handling
+        document.addEventListener('DOMContentLoaded', function() {
+            const alertsDropdown = document.getElementById('alertsDropdown');
+            const notificationCounter = document.getElementById('notificationCounter');
+            const alertsDropdownMenu = document.getElementById('alertsDropdownMenu');
+
+            // Function to reset notification counter
+            function resetNotificationCounter() {
+                notificationCounter.style.display = 'none';
+            }
+
+            // Handle dropdown toggle
+            alertsDropdown.addEventListener('click', function(e) {
+                e.preventDefault();
+                const isOpen = alertsDropdownMenu.classList.contains('show');
+                
+                if (isOpen) {
+                    // If dropdown is open, close it
+                    alertsDropdownMenu.classList.remove('show');
+                    alertsDropdown.setAttribute('aria-expanded', 'false');
+                } else {
+                    // If dropdown is closed, open it and reset counter
+                    alertsDropdownMenu.classList.add('show');
+                    alertsDropdown.setAttribute('aria-expanded', 'true');
+                    resetNotificationCounter();
+                }
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!alertsDropdown.contains(e.target) && !alertsDropdownMenu.contains(e.target)) {
+                    alertsDropdownMenu.classList.remove('show');
+                    alertsDropdown.setAttribute('aria-expanded', 'false');
+                }
+            });
+        });
+    </script>
 
 </body>
 
