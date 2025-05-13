@@ -209,7 +209,7 @@ if(isset($_GET['registered']) && $_GET['registered'] == 'true') {
                 <div style="color: red; margin-bottom: 15px;"><?php echo $login_err; ?></div>
             <?php endif; ?>
 
-            <form action="../backend/login_process.php" method="post">
+            <form action="/backend/operations/login_process.php" method="post">
                 <div class="form-group">
                     <label for="email">Email Address</label>
                     <input type="email" id="email" name="email" placeholder="Placeholder" value="<?php echo $email; ?>" class="<?php echo (!empty($email_err)) ? 'is-invalid' : ''; ?>">
