@@ -2,6 +2,12 @@
 require_once __DIR__ . '/../config/database.php';
 
 class Staff {
+    private $conn;
+
+    public function __construct($db)
+    {
+        $this->conn = $db;
+    }
     // Authenticate staff member
     public static function authenticate($username, $password)
     {
@@ -24,6 +30,11 @@ class Staff {
     // Add new staff member
     public static function add($firstname, $last_name, $role, $email, $phone, $username, $password)
     {
+        
+    }
 
+    // Get staff by role
+    public static function getByRole($role) {
+        return executeStoredProcedure('GetStaffByRole', [$role]);
     }
 }

@@ -8,45 +8,30 @@
 //     exit;
 // }
 ?>
-<?php
-$appointments = [];
 
-if (file_exists('appointments.txt')) {
-    $lines = file('appointments.txt', FILE_IGNORE_NEW_LINES);
-
-    foreach ($lines as $line) {
-        $fields = explode('|', $line);
-
-        if (count($fields) >= 10) {
-            $appointments[] = [
-                'name' => trim($fields[0]) . ' ' . trim($fields[1]),
-                'number' => trim($fields[2]),
-                'doctor' => trim($fields[6]),
-                'appointment_date' => trim($fields[4]),
-                'appointment_time' => trim($fields[5]),
-                'status' => 'Pending',
-                'booked_on' => trim($fields[9])
-            ];
-        }
-    }
-}
-?>
 <?php
 $doctors = [];
+require_once '../backend/config/database.php';
+require_once '../backend/models/Appointment.php';
 
-if (file_exists('doctors.txt')) {
-    $lines = file('doctors.txt', FILE_IGNORE_NEW_LINES);
+$database = getDbConnection();
+$appointment = new Appointment($database);
+$appointments = $appointment->getAll();
+$appointment_stats = $appointment->getAppointmentStats();
 
-    foreach ($lines as $line) {
-        $fields = explode('|', $line);
-
-        if (count($fields) >= 10) {
-            $appointments[] = [
-                'name' => trim($fields[0]) . ' ' . trim($fields[1])
-            ];
-        }
-    }
-}
+//if (file_exists('doctors.txt')) {
+//    $lines = file('doctors.txt', FILE_IGNORE_NEW_LINES);
+//
+//    foreach ($lines as $line) {
+//        $fields = explode('|', $line);
+//
+//        if (count($fields) >= 10) {
+//            $appointments[] = [
+//                'name' => trim($fields[0]) . ' ' . trim($fields[1])
+//            ];
+//        }
+//    }
+//}
 ?>
 
 
@@ -305,7 +290,7 @@ if (file_exists('doctors.txt')) {
                                             <tbody>
                                                 <?php if (!empty($appointments)): ?>
                                                     <?php foreach ($appointments as $index => $a): ?>
-                                                        <tr class="clickable-row" onclick="window.location='appointmentdetails.php?contact=<?= urlencode($a['number']) ?>'">
+                                                        <tr class="clickable-row" onclick="window.location='appointmentdetails.php?id=<?= urlencode($a['id']) ?>'">
                                                             <td><?= $index + 1 ?></td>
                                                             <td><?= htmlspecialchars($a['name']) ?></td>
                                                             <td><?= htmlspecialchars($a['appointment_date']) ?></td>
@@ -338,7 +323,8 @@ if (file_exists('doctors.txt')) {
                                                             <div
                                                                 class="text-xs font-weight-bold text-primary text-uppercase mb-3">
                                                                 Total No. of Appointments</div>
-                                                            <div class="h2 mb-0 font-weight-bold text-gray-800">50
+                                                            <div class="h2 mb-0 font-weight-bold text-gray-800">
+                                                                <?= $appointment_stats[0]['total_appointments'] ?? 0 ?>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -353,7 +339,8 @@ if (file_exists('doctors.txt')) {
                                                             <div
                                                                 class="text-xs font-weight-bold text-primary text-uppercase mb-3">
                                                                 Appointments Served</div>
-                                                            <div class="h2 mb-0 font-weight-bold text-gray-800">10
+                                                            <div class="h2 mb-0 font-weight-bold text-gray-800">
+                                                                <?= $appointment_stats[0]['total_completed'] ?? 0 ?>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -370,7 +357,8 @@ if (file_exists('doctors.txt')) {
                                                             <div
                                                                 class="text-xs font-weight-bold text-primary text-uppercase mb-3">
                                                                 Appointments Pending</div>
-                                                            <div class="h2 mb-0 font-weight-bold text-gray-800">38
+                                                            <div class="h2 mb-0 font-weight-bold text-gray-800">
+                                                                <?= $appointment_stats[0]['total_scheduled'] ?? 0 ?>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -385,7 +373,8 @@ if (file_exists('doctors.txt')) {
                                                             <div
                                                                 class="text-xs font-weight-bold text-primary text-uppercase mb-3">
                                                                 Cancel Appointment</div>
-                                                            <div class="h2 mb-0 font-weight-bold text-gray-800">50
+                                                            <div class="h2 mb-0 font-weight-bold text-gray-800">
+                                                                <?= $appointment_stats[0]['total_cancelled'] ?? 0 ?>
                                                             </div>
                                                         </div>
                                                     </div>
