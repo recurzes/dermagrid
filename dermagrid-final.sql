@@ -1263,3 +1263,30 @@ DELIMITER ;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2025-05-13 23:15:56
+
+DELIMITER ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `GetAppointmentById`(
+    IN p_id INT
+)
+BEGIN
+    SELECT
+        a.id,
+        CONCAT(p.first_name, ' ', p.last_name) AS patient_name,
+        p.phone AS contact_number,
+        p.email,
+        CONCAT(s.first_name, ' ', s.last_name) AS doctor_name,
+        a.appointment_date,
+        a.appointment_time,
+        a.status,
+        a.reason,
+        a.created_at AS booked_on
+    FROM
+        appointment a
+            INNER JOIN
+        patient p ON a.patient_id = p.id
+            INNER JOIN
+        staff s ON a.staff_id = s.id
+    WHERE
+        a.id = p_id;
+END ;;
+DELIMITER ;
