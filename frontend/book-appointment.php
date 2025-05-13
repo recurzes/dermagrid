@@ -41,7 +41,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $appointment = new Appointment($database);
 
         // Book appointment
-        $result = $appointment->bookAppointment($patientData, $appointmentData);
+        $result = $appointment->bookAppointment($patientData, $appointmentData, false);
 
         if ($result['success']) {
             // Redirect to appointment details page

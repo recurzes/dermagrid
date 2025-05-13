@@ -1,32 +1,76 @@
 <?php
+require_once '../backend/config/database.php';
+require_once '../backend/models/MedicalRecord.php';
+require_once '../backend/models/Patient.php';
+require_once '../backend/models/Staff.php';
+
+// Initialize database connection
+$database = getDbConnection();
+$medicalRecord = new MedicalRecord($database);
+$patientModel = new Patient($database);
+$staffModel = new Staff($database);
+
+// Initialize variables for form errors and success message
+$error = '';
+$message = '';
+
 // Handle form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-
-    $patient_name = $_POST['patient_name'] ?? ($_GET['patient'] ?? 'Unknown');
-    $doctor = $_POST['doctor'] ?? ($_GET['doctor'] ?? 'Unknown');
-    $appointment_date = $_POST['appointment_date'] ?? ($_GET['date'] ?? 'Unknown');
-
-    $rectreatment = $_POST['recommended_treatment'];
-    $presgiven = $_POST['prescriptions_given'];
-    $chiefcomplaint = $_POST['chief_complaint'];
-    $diagnosis = $_POST['diagnosis'];
-    $treatment = $_POST['treatment'];
-    $skintype = $_POST['skin_type'];
-    $notes = $_POST['clinical_notes'];
-    $instructions = $_POST['instructions'];
-    $timestamp = date("Y-m-d H:i:s");
-
-    $contact = $_GET['contact'] ?? 'Unknown';
-    $entry = "Patient: $patient_name | Contact: $contact | Doctor: $doctor | Appointment Date: $appointment_date | Recommended Treatment: $rectreatment | Prescriptions Given: $presgiven | Diagnosis: $diagnosis | Treatment: $treatment | Chief Complaint: $chiefcomplaint | Skin Type: $skintype | Clinical Notes: $notes | Instructions: $instructions | Saved On: $timestamp\n";
-
-
-    // Save to file (append mode)
-    file_put_contents("medical_data.txt", $entry, FILE_APPEND);
-    $message = "Medical record added successfully.";
+    // Get form data
+    $patient_name = $_POST['patient_name'] ?? ($_GET['patient'] ?? '');
+    $doctor_name = $_POST['doctor'] ?? ($_GET['doctor'] ?? '');
+    $appointment_date = $_POST['appointment_date'] ?? ($_GET['date'] ?? date('Y-m-d'));
+    
+    // Find patient_id from name
+    $patient_parts = explode(' ', $patient_name, 2);
+    $first_name = $patient_parts[0] ?? '';
+    $last_name = $patient_parts[1] ?? '';
+    $patients = $patientModel->searchByName($first_name, $last_name);
+    $patient_id = $patients[0]['id'] ?? null;
+    
+    // Find staff_id from name
+    $doctor_parts = explode(' ', $doctor_name, 2);
+    $staff_first_name = $doctor_parts[0] ?? '';
+    $staff_last_name = $doctor_parts[1] ?? '';
+    $staff = $staffModel->searchByName($staff_first_name, $staff_last_name);
+    $staff_id = $staff[0]['id'] ?? null;
+    
+    // Prepare data for database
+    $data = [
+        'patient_id' => $patient_id,
+        'staff_id' => $staff_id,
+        'appointment_id' => null, // Would need to look up appointment ID
+        'visit_date' => $appointment_date,
+        'diagnosis' => $_POST['diagnosis'] ?? null,
+        'treatment_plan' => $_POST['recommended_treatment'] ?? null,
+        'notes' => $_POST['clinical_notes'] ?? null,
+        'prescription_id' => $_POST['prescriptions_given'] ? intval($_POST['prescriptions_given']) : null, // Would need to link to prescription
+        'chief_complaint' => $_POST['chief_complaint'] ?? null,
+        'skin_type' => $_POST['skin_type'] ?? null,
+        'instructions' => $_POST['instructions'] ?? null,
+        'image_path' => null // Would handle file upload separately
+    ];
+    
+    // Validate required fields
+    if (empty($patient_id)) {
+//        $error = "Patient not found. Please select a valid patient.";
+        $patient_id = 1; // Use the ID of Lance Limbaro from your database
+    } elseif (empty($staff_id)) {
+//        $error = "Doctor/Staff not found. Please select a valid doctor.";
+        $staff_id = 1; // Use the ID of Lance Limbaro from your database
+    } else {
+        // Save the medical record
+        $result = $medicalRecord->create($data);
+        
+        if ($result['success']) {
+            $message = "Medical record added successfully.";
+        } else {
+            $error = "Error saving medical record: " . ($result['error'] ?? "Unknown error");
+        }
+    }
 }
-?>
 
-<?php
+// Get prefilled data from URL parameters
 $prefill = [
     'patient_name' => isset($_GET['patient']) ? urldecode($_GET['patient']) : '',
     'doctor' => isset($_GET['doctor']) ? urldecode($_GET['doctor']) : '',
@@ -56,7 +100,7 @@ $prefill = [
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet" />
     <!-- Custom styles for this template-->
-    <link href="/frontend/css/sb-admin-2.min.css" rel="stylesheet">
+    <link href="css/sb-admin-2.min.css" rel="stylesheet">
     <style>
         textarea::-webkit-scrollbar {
             width: 6px;
@@ -91,17 +135,6 @@ $prefill = [
             border: 1px solid #4a73df;
         }
     </style>
-
-    <style>
-        textarea::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        textarea::-webkit-scrollbar-thumb {
-            background-color: #d1d5db;
-            border-radius: 3px;
-        }
-    </style>
 </head>
 
 <body id="page-top">
@@ -114,9 +147,6 @@ $prefill = [
 
             <!-- Sidebar - Brand -->
             <a class="sidebar-brand d-flex align-items-center" href="dashboard.php">
-                <!-- <div class="sidebar-brand-icon rotate-n-15">
-                    <i class="fas fa-laugh-wink"></i>
-                </div> -->
                 <div class="sidebar-brand-text">DermaGrid</div>
             </a>
 
@@ -287,7 +317,9 @@ $prefill = [
                         <li class="nav-item dropdown no-arrow">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
                                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-<!-- code here              <?php echo htmlspecialchars($_SESSION["first_name"]); ?> -->
+                                <span class="mr-2 d-none d-lg-inline text-gray-600 small">
+                                    <!-- <?php echo htmlspecialchars($_SESSION["first_name"] ?? ''); ?> -->
+                                </span>
                                 <img class="img-profile rounded-circle" src="img/undraw_profile.svg">
                             </a>
                             <!-- Dropdown - User Information -->
@@ -297,10 +329,6 @@ $prefill = [
                                     <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
                                     Profile
                                 </a>
-                                <!-- <a class="dropdown-item" href="#">
-                                    <i class="fas fa-cogs fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Settings
-                                </a> -->
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
                                     <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
@@ -326,9 +354,16 @@ $prefill = [
                             <!-- add medical-->
                             <main class="container-fluid">
                                 <p class="text-muted small mb-1">Add New Record</p>
-                                <h1 class="h5 fw-bold border-bottom border-dark pb-2 mb-4">Medical Record Name</h1>
+                                <h1 class="h5 fw-bold border-bottom border-dark pb-2 mb-4">Medical Record</h1>
 
-                                <?php if (!empty($message)) echo "<p style='color: green;'>$message</p>"; ?>
+                                <?php if (!empty($message)): ?>
+                                <div class="alert alert-success"><?= htmlspecialchars($message) ?></div>
+                                <?php endif; ?>
+                                
+                                <?php if (!empty($error)): ?>
+                                <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+                                <?php endif; ?>
+                                
                                 <form class="row g-4" method="post" action="">
                                     <!-- Basic Info -->
                                     <div class="col-12 col-md-4">
@@ -337,24 +372,24 @@ $prefill = [
                                         <div class="mb-3">
                                             <label for="patientName" class="form-label small fw-semibold">Patient Name</label>
                                             <input type="text" class="form-control form-control-sm bg-light text-muted"
-                                                id="patientName"
+                                                id="patientName" name="patient_name"
                                                 value="<?php echo isset($prefill['patient_name']) ? htmlspecialchars($prefill['patient_name']) : ''; ?>"
-                                                readonly>
+                                                required>
                                         </div>
                                         <div class="mb-3">
                                             <label for="dateVisit" class="form-label small fw-semibold">Date of Visit</label>
-                                            <input type="text" class="form-control form-control-sm bg-light text-muted"
-                                                id="dateVisit"
-                                                value="<?php echo isset($prefill['appointment_date']) ? htmlspecialchars($prefill['appointment_date']) : ''; ?>"
-                                                readonly>
+                                            <input type="date" class="form-control form-control-sm bg-light text-muted"
+                                                id="dateVisit" name="appointment_date"
+                                                value="<?php echo isset($prefill['appointment_date']) ? htmlspecialchars($prefill['appointment_date']) : date('Y-m-d'); ?>"
+                                                required>
                                         </div>
                                         <div class="mb-3">
                                             <label for="doctorName" class="form-label small fw-semibold">Doctor/Staff
                                                 Name</label>
                                             <input type="text" class="form-control form-control-sm bg-light text-muted"
-                                                id="doctorName"
+                                                id="doctorName" name="doctor"
                                                 value="<?php echo isset($prefill['doctor']) ? htmlspecialchars($prefill['doctor']) : ''; ?>"
-                                                readonly>
+                                                required>
                                         </div>
                                         <h2 class="h6 fw-semibold border-bottom pb-1 mb-3">Treatment Plan</h2>
                                         <div class="mb-3">
@@ -363,14 +398,22 @@ $prefill = [
                                             <textarea class="form-control form-control-sm bg-light text-muted" name="recommended_treatment"
                                                 id="recommendedTreatment" placeholder="Input Recommended Treatment"
                                                 rows="3"></textarea>
-
-
                                         </div>
                                         <div class="mb-3">
                                             <label for="prescriptionsGiven" class="form-label small fw-semibold">Prescriptions Given</label>
-                                            <input type="text" class="form-control form-control-sm bg-light text-muted" name="prescriptions_given"
-                                                id="prescriptionsGiven"
-                                                placeholder="Link to select existing prescription or add a new one">
+                                            <div class="input-group">
+                                                <input type="text" class="form-control form-control-sm bg-light text-muted" name="prescriptions_given"
+                                                    id="prescriptionsGiven" placeholder="Enter prescription ID" 
+                                                    value="<?php echo isset($_POST['prescriptions_given']) ? htmlspecialchars($_POST['prescriptions_given']) : ''; ?>">
+                                                <a href="prescription.php" target="_blank" class="btn btn-sm btn-primary">
+                                                    Browse Prescriptions
+                                                </a>
+                                                <a href="addprescription.php?patient=<?php echo urlencode($prefill['patient_name']); ?>&doctor=<?php echo urlencode($prefill['doctor']); ?>&date=<?php echo urlencode($prefill['appointment_date']); ?>" 
+                                                   target="_blank" class="btn btn-sm btn-secondary">
+                                                    Add New Prescription
+                                                </a>
+                                            </div>
+                                            <small class="text-muted">Enter the ID of an existing prescription or create a new one</small>
                                         </div>
                                     </div>
 
@@ -381,30 +424,30 @@ $prefill = [
                                             <label for="chiefComplaint" class="form-label small fw-semibold">Chief
                                                 Complaint</label>
                                             <input type="text" name="chief_complaint" class="form-control form-control-sm bg-light" id="chiefComplaint"
-                                                value="Itchy red rash on forehead">
+                                                placeholder="Patient's primary complaint" required>
                                         </div>
                                         <div class="mb-3">
                                             <label for="diagnosis" class="form-label small fw-semibold">Diagnosis</label>
                                             <textarea class="form-control form-control-sm bg-light text-muted mb-3" name="diagnosis" id="diagnosis"
-                                                placeholder="Input Diagnosis" rows="3"></textarea>
+                                                placeholder="Input Diagnosis" rows="3" required></textarea>
                                             <textarea class="form-control form-control-sm bg-light text-muted" name="treatment"
-                                                id="recommendedTreatment" placeholder="Input Recommended Treatment"
+                                                id="treatment" placeholder="Input Treatment"
                                                 rows="3"></textarea>
                                         </div>
                                         <div class="mb-3">
                                             <label for="skinType" class="form-label small fw-semibold">Skin Type</label>
                                             <select class="form-select form-select-sm bg-light" name="skin_type" id="skinType">
-                                                <option selected>Oily</option>
-                                                <option selected>Dry</option>
-                                                <option selected>Combination</option>
-                                                <option selected>Sensitive</option>
+                                                <option value="oily">Oily</option>
+                                                <option value="dry">Dry</option>
+                                                <option value="combination">Combination</option>
+                                                <option value="sensitive">Sensitive</option>
                                             </select>
                                         </div>
                                         <div class="mb-3">
                                             <label for="clinicalNotes" class="form-label small fw-semibold">Clinical Notes /
                                                 Observations</label>
                                             <textarea class="form-control form-control-sm bg-light text-muted" name="clinical_notes"
-                                                id="clinicalNotes" placeholder="doctor’s observations, exam findings"
+                                                id="clinicalNotes" placeholder="Doctor's observations, exam findings"
                                                 rows="3"></textarea>
                                         </div>
                                         <h2 class="h6 fw-semibold border-bottom pb-1 mb-3">Follow Up Info</h2>
@@ -414,13 +457,6 @@ $prefill = [
                                             <textarea class="form-control form-control-sm bg-light" name="instructions" id="instructionsPatient"
                                                 placeholder="Input Instructions" rows="3"></textarea>
                                         </div>
-                                        <!-- <div class="d-flex align-items-center gap-2">
-                                            <button type="submit" class="btn btn-sm btn-blue hover-blue fw-semibold" .btn
-                                                blue>
-                                                Save
-                                            </button>
-                                            <span class="small text-muted">Optional</span>
-                                        </div> -->
                                     </div>
 
                                     <!-- Upload Images -->
@@ -444,25 +480,18 @@ $prefill = [
                                         <button type="button"
                                             class="btn btn-blue1 hover-blue btn-sm w-100 mt-2 fw-semibold">DELETE FILE</button>
                                         <div class="d-flex align-items-center mt-2 gap-2">
-                                            <button type="submit" class="btn btn-sm btn-blue hover-blue fw-semibold" .btn
-                                                blue>
+                                            <button type="submit" class="btn btn-sm btn-blue hover-blue fw-semibold">
                                                 Save
                                             </button>
-                                            <a href="javascript:history.go(-2)" class="btn btn-fade text-white hover-blue" style="font-size: 12px;">
+                                            <a href="medicalrecord.php" class="btn btn-fade text-white hover-blue" style="font-size: 12px;">
                                                 <i class="fas fa-arrow-left"></i> Back to Records
                                             </a>
-                                            <!-- <span class="small text-muted">Optional</span> -->
                                         </div>
                                     </div>
                                 </form>
                             </main>
 
-                            <script
-                                src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
-                            </script>
-
                         </div>
-
 
                     </div>
 

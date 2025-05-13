@@ -9,24 +9,19 @@
 // }
 ?>
 <?php
+require_once __DIR__ . '/../backend/config/database.php';
+require_once __DIR__ . '/../backend/models/Staff.php';
+
+// Get staff statistics
+$staffStats = ['total_doctors' => 0, 'total_nurses' => 0, 'total_receptionists' => 0, 'total_staff' => 0];
 $doctors = [];
-
-if (file_exists('doctors.txt')) {
-    $lines = file('doctors.txt', FILE_IGNORE_NEW_LINES);
-
-    foreach ($lines as $line) {
-        $fields = explode('|', $line);
-
-        if (count($fields) >= 10) {
-            $appointments[] = [
-                'name' => trim($fields[0]) . ' ' . trim($fields[1]),
-                'number' => trim($fields[2]),
-                'email' => trim($fields[4]),
-                'specialty' => trim($fields[5]),
-                'availability' => trim($fields[6]),
-            ];
-        }
-    }
+try {
+    $database = getDbConnection();
+    $staffModel = new Staff($database);
+    $staffStats = $staffModel->getStaffStats();
+    $doctors = $staffModel->getByRole('doctor');
+} catch (Exception $e) {
+    // Handle error silently
 }
 ?>
 
@@ -268,23 +263,9 @@ if (file_exists('doctors.txt')) {
                                         <div class="row no-gutters align-items-center">
                                             <div class="col mr-2">
                                                 <div class="text-xs font-weight-bold text-primary text-uppercase mb-3">
-                                                    Total No. of Doctors</div>
-                                                <div class="h2 mb-0 font-weight-bold text-gray-800">38
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-xl-3 col-md-6 mb-4">
-                                <div class="card shadow h-100 py-2">
-                                    <div class="card-body py-5 px-3">
-                                        <div class="row no-gutters align-items-center">
-                                            <div class="col mr-2">
-                                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-3">
                                                     Total Staff</div>
-                                                <div class="h2 mb-0 font-weight-bold text-gray-800">50
+                                                <div class="h2 mb-0 font-weight-bold text-gray-800">
+                                                    <?php echo $staffStats['total_staff']; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -298,8 +279,9 @@ if (file_exists('doctors.txt')) {
                                         <div class="row no-gutters align-items-center">
                                             <div class="col mr-2">
                                                 <div class="text-xs font-weight-bold text-primary text-uppercase mb-3">
-                                                    Technical Staff</div>
-                                                <div class="h2 mb-0 font-weight-bold text-gray-800">2
+                                                    Total No. of Doctors</div>
+                                                <div class="h2 mb-0 font-weight-bold text-gray-800">
+                                                    <?php echo $staffStats['total_doctors']; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -313,8 +295,25 @@ if (file_exists('doctors.txt')) {
                                         <div class="row no-gutters align-items-center">
                                             <div class="col mr-2">
                                                 <div class="text-xs font-weight-bold text-primary text-uppercase mb-3">
-                                                    Secretary Staff</div>
-                                                <div class="h2 mb-0 font-weight-bold text-gray-800">10
+                                                    Nurses</div>
+                                                <div class="h2 mb-0 font-weight-bold text-gray-800">
+                                                    <?php echo $staffStats['total_nurses']; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-xl-3 col-md-6 mb-4">
+                                <div class="card shadow h-100 py-2">
+                                    <div class="card-body py-5 px-3">
+                                        <div class="row no-gutters align-items-center">
+                                            <div class="col mr-2">
+                                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-3">
+                                                    Receptionists</div>
+                                                <div class="h2 mb-0 font-weight-bold text-gray-800">
+                                                    <?php echo $staffStats['total_receptionists']; ?>
                                                 </div>
                                             </div>
                                         </div>
@@ -333,34 +332,30 @@ if (file_exists('doctors.txt')) {
                                 </div>
                                 <div class="card-body">
                                     <div class="table-responsive table-striped">
-                                        <table class="table table-bordered table-hover">
+                                        <table class="table table-bordered table-hover table-clickable">
                                             <thead class="thead-dark">
                                                 <tr>
                                                     <th>#</th>
                                                     <th>Name</th>
-                                                    <th>Gender</th>
                                                     <th>Email</th>
                                                     <th>Phone</th>
-                                                    <th>Specialty</th>
-                                                    <th>Availability</th>
+                                                    <th>Username</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <?php if (!empty($doctors)): ?>
-                                                    <?php foreach ($doctors as $index => $doc): ?>
-                                                        <tr>
+                                                    <?php foreach ($doctors as $index => $doctor): ?>
+                                                        <tr data-href="doctordetails.php?id=<?= $doctor['id'] ?>">
                                                             <td><?= $index + 1 ?></td>
-                                                            <td><?= htmlspecialchars($doc['name']) ?></td>
-                                                            <td><?= htmlspecialchars($doc['gender']) ?></td>
-                                                            <td><?= htmlspecialchars($doc['email']) ?></td>
-                                                            <td><?= htmlspecialchars($doc['phone']) ?></td>
-                                                            <td><?= htmlspecialchars($doc['specialty']) ?></td>
-                                                            <td><?= htmlspecialchars($doc['availability']) ?></td>
+                                                            <td><?= htmlspecialchars($doctor['full_name']) ?></td>
+                                                            <td><?= htmlspecialchars($doctor['email']) ?></td>
+                                                            <td><?= htmlspecialchars($doctor['phone']) ?></td>
+                                                            <td><?= htmlspecialchars($doctor['username']) ?></td>
                                                         </tr>
                                                     <?php endforeach; ?>
                                                 <?php else: ?>
                                                     <tr>
-                                                        <td colspan="7" class="text-center text-muted">No doctors found.</td>
+                                                        <td colspan="5" class="text-center text-muted">No doctors found.</td>
                                                     </tr>
                                                 <?php endif; ?>
                                             </tbody>
@@ -507,12 +502,19 @@ if (file_exists('doctors.txt')) {
     </script>
 
     <script>
+        // First, add the clickable class to the table
+        document.querySelector(".table").classList.add("table-clickable");
+
+        // Then handle the clicks
         const tableRows = document.querySelectorAll(".table-clickable tbody tr");
         for (const tableRow of tableRows) {
             tableRow.addEventListener("click", function() {
-                window.open(this.dataset.href, "_blank");
+                if (this.dataset.href) {
+                    window.location.href = this.dataset.href;
+                }
             });
         }
+
     </script>
 
 </body>

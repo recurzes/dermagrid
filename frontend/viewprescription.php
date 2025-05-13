@@ -1,70 +1,114 @@
 <?php
 require_once '../backend/config/database.php';
 require_once '../backend/models/Prescription.php';
+require_once '../backend/models/Patient.php';
+require_once '../backend/models/Staff.php';
 
 // Initialize database connection
 $database = getDbConnection();
 $prescriptionModel = new Prescription($database);
+$patientModel = new Patient($database);
+$staffModel = new Staff($database);
 
-// Get all prescriptions
-$prescriptions = $prescriptionModel->getAll();
+// Get prescription ID from URL
+$id = $_GET['id'] ?? 0;
+
+// Get prescription details
+$prescription = $prescriptionModel->getById($id);
+
+// If prescription not found, redirect to prescription list
+if (!$prescription) {
+    header('Location: prescription.php');
+    exit;
+}
+
+// Get patient and staff details
+$patient = $patientModel->getById($prescription['patient_id']);
+$staff = $staffModel->getById($prescription['staff_id']);
+
+// Handle status update
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if ($_POST['action'] === 'complete') {
+        $prescriptionModel->updateStatus($id, 'completed');
+        header('Location: viewprescription.php?id=' . $id);
+        exit;
+    } elseif ($_POST['action'] === 'cancel') {
+        $prescriptionModel->updateStatus($id, 'cancelled');
+        header('Location: viewprescription.php?id=' . $id);
+        exit;
+    }
+}
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title>DermaGrid - Prescriptions</title>
+    <title>DermaGrid - View Prescription</title>
 
     <!-- Custom fonts for this template-->
     <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-    <link
-            href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
-            rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
-    <!-- Custom styles for this template-->
+    <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
     <link href="css/sb-admin-2.min.css" rel="stylesheet">
     <style>
-        textarea::-webkit-scrollbar {
-            width: 6px;
+        .prescription-card {
+            border: 1px solid #e3e6f0;
+            border-radius: 0.35rem;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
         }
 
-        textarea::-webkit-scrollbar-thumb {
-            background-color: #d1d5db;
-            border-radius: 3px;
+        .prescription-header {
+            background-color: #4e73df;
+            color: white;
+            padding: 1rem;
+            border-top-left-radius: 0.35rem;
+            border-top-right-radius: 0.35rem;
         }
 
-        .hover-blue:hover {
-            background-color: #0130a7;
-            border-color: #0130a7;
+        .prescription-body {
+            padding: 1.5rem;
+        }
+
+        .prescription-footer {
+            background-color: #f8f9fc;
+            padding: 1rem;
+            border-bottom-left-radius: 0.35rem;
+            border-bottom-right-radius: 0.35rem;
+            border-top: 1px solid #e3e6f0;
+        }
+
+        .label {
+            font-weight: bold;
+            color: #5a5c69;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .status-active {
+            background-color: #1cc88a;
             color: white;
         }
 
-        .btn-blue {
-            background-color: #4a73df;
+        .status-completed {
+            background-color: #36b9cc;
             color: white;
-            border: 1px solid #4a73df;
         }
 
-        .btn-blue1 {
-            background-color: #7aa0ff;
+        .status-cancelled {
+            background-color: #e74a3b;
             color: white;
-            border: 1px solid #7aa0ff;
-        }
-
-        .blue {
-            background-color: #4a73df;
-            color: white;
-            border: 1px solid #4a73df;
         }
     </style>
 </head>
@@ -76,7 +120,7 @@ $prescriptions = $prescriptionModel->getAll();
 
     <!-- Sidebar -->
     <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
-
+        <!-- Sidebar content (same as in prescription.php) -->
         <!-- Sidebar - Brand -->
         <a class="sidebar-brand d-flex align-items-center" href="dashboard.php">
             <div class="sidebar-brand-text">DermaGrid</div>
@@ -86,7 +130,7 @@ $prescriptions = $prescriptionModel->getAll();
         <hr class="sidebar-divider my-0">
 
         <!-- Nav Item - Dashboard -->
-        <li class="nav-item active">
+        <li class="nav-item">
             <a class="nav-link" href="dashboard.php">
                 <i class="fas fa-fw fa-tachometer-alt"></i>
                 <span>Dashboard</span></a>
@@ -129,7 +173,6 @@ $prescriptions = $prescriptionModel->getAll();
         <div class="text-center d-none d-md-inline">
             <button class="rounded-circle border-0" id="sidebarToggle"></button>
         </div>
-
     </ul>
     <!-- End of Sidebar -->
 
@@ -141,7 +184,7 @@ $prescriptions = $prescriptionModel->getAll();
 
             <!-- Topbar -->
             <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-
+                <!-- Topbar content (same as in prescription.php) -->
                 <!-- Sidebar Toggle (Topbar) -->
                 <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
                     <i class="fa fa-bars"></i>
@@ -149,7 +192,7 @@ $prescriptions = $prescriptionModel->getAll();
 
                 <!-- Page Heading -->
                 <div class="d-sm-flex align-items-center justify-content-center">
-                    <h1 class="h3 mb-0 text-gray-800">Prescriptions</h1>
+                    <h1 class="h3 mb-0 text-gray-800">View Prescription</h1>
                 </div>
 
                 <!-- Topbar Search -->
@@ -192,28 +235,7 @@ $prescriptions = $prescriptionModel->getAll();
                                     <span class="font-weight-bold">A new monthly report is ready to download!</span>
                                 </div>
                             </a>
-                            <a class="dropdown-item d-flex align-items-center" href="#">
-                                <div class="mr-3">
-                                    <div class="icon-circle bg-success">
-                                        <i class="fas fa-donate text-white"></i>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div class="small text-gray-500">December 7, 2019</div>
-                                    $290.29 has been deposited into your account!
-                                </div>
-                            </a>
-                            <a class="dropdown-item d-flex align-items-center" href="#">
-                                <div class="mr-3">
-                                    <div class="icon-circle bg-warning">
-                                        <i class="fas fa-exclamation-triangle text-white"></i>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div class="small text-gray-500">December 2, 2019</div>
-                                    Spending Alert: We've noticed unusually high spending for your account.
-                                </div>
-                            </a>
+                            <!-- More alerts -->
                             <a class="dropdown-item text-center small text-gray-500" href="#">Show All Alerts</a>
                         </div>
                     </li>
@@ -232,17 +254,10 @@ $prescriptions = $prescriptionModel->getAll();
                         <!-- Dropdown - User Information -->
                         <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
                              aria-labelledby="userDropdown">
+                            <!-- User dropdown menu -->
                             <a class="dropdown-item" href="#">
                                 <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
                                 Profile
-                            </a>
-                            <a class="dropdown-item" href="#">
-                                <i class="fas fa-cogs fa-sm fa-fw mr-2 text-gray-400"></i>
-                                Settings
-                            </a>
-                            <a class="dropdown-item" href="#">
-                                <i class="fas fa-list fa-sm fa-fw mr-2 text-gray-400"></i>
-                                Activity Log
                             </a>
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
@@ -251,58 +266,64 @@ $prescriptions = $prescriptionModel->getAll();
                             </a>
                         </div>
                     </li>
-
                 </ul>
-
             </nav>
             <!-- End of Topbar -->
 
             <!-- Begin Page Content -->
             <div class="container-fluid">
-
-                <!-- Content Row -->
                 <div class="row">
-
-                    <!-- Content Column -->
-                    <div class="col">
-                        <div class="p-4">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <p class="small text-black fw-semibold border-bottom border-black pb-2 mb-0">
-                                    Prescriptions</p>
-                                <a href="addprescription.php" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-plus"></i> Add New Prescription
-                                </a>
+                    <div class="col-lg-8 mx-auto">
+                        <div class="prescription-card mb-4">
+                            <div class="prescription-header d-flex justify-content-between align-items-center">
+                                <h5 class="m-0 font-weight-bold">Prescription #<?= htmlspecialchars($prescription['id']) ?></h5>
+                                <span class="status-badge status-<?= strtolower($prescription['status']) ?>">
+                                        <?= htmlspecialchars(ucfirst($prescription['status'])) ?>
+                                    </span>
                             </div>
+                            <div class="prescription-body">
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <p><span class="label">Patient:</span> <?= htmlspecialchars($patient['first_name'] . ' ' . $patient['last_name']) ?></p>
+                                        <p><span class="label">Doctor:</span> <?= htmlspecialchars($staff['first_name'] . ' ' . $staff['last_name']) ?></p>
+                                        <p><span class="label">Created On:</span> <?= htmlspecialchars(date('M d, Y', strtotime($prescription['created_at']))) ?></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p><span class="label">Medication:</span> <?= htmlspecialchars($prescription['medication_name']) ?></p>
+                                        <p><span class="label">Dosage:</span> <?= htmlspecialchars($prescription['dosage'] . ' ' . $prescription['unit']) ?></p>
+                                        <p><span class="label">Frequency:</span> <?= htmlspecialchars($prescription['frequency']) ?></p>
+                                    </div>
+                                </div>
 
-                            <div class="d-flex flex-column gap-2">
-                                <?php if (!empty($prescriptions)): ?>
-                                    <?php foreach ($prescriptions as $prescription): ?>
-                                        <button type="button"
-                                                onclick="location.href='viewprescription.php?id=<?= $prescription['id'] ?>'"
-                                                class="btn-blue hover-blue d-flex align-items-center p-3 border-0 w-100 text-start"
-                                                style="cursor: pointer;">
-                                            <div class="d-flex justify-content-center align-items-center bg-secondary me-3"
-                                                 style="width: 40px; height: 40px;">
-                                                <img src="https://storage.googleapis.com/a1aa/image/e859548d-40b7-4237-dafc-f172c8de247a.jpg"
-                                                     alt="Prescription icon"
-                                                     width="16"
-                                                     height="16"/>
-                                            </div>
-                                            <div class="text-white small flex-grow-1">
-                                                <div class="d-flex justify-content-between">
-                                                    <strong><?= htmlspecialchars($prescription['medication_name']) ?></strong>
-                                                    <span>ID: <?= htmlspecialchars($prescription['id']) ?></span>
-                                                </div>
-                                                <div class="small text-white-50">
-                                                    <?= htmlspecialchars($prescription['dosage'] . ' ' . $prescription['unit'] . ', ' . $prescription['frequency']) ?>
-                                                </div>
-                                            </div>
-                                            <i class="fas fa-chevron-right text-white"></i>
-                                        </button>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <div class="alert alert-info">
-                                        No prescriptions found. <a href="addprescription.php">Add a new prescription</a>.
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <p><span class="label">Duration:</span> <?= htmlspecialchars($prescription['duration']) ?></p>
+                                        <p><span class="label">Instructions:</span> <?= htmlspecialchars($prescription['instructions']) ?></p>
+                                        <?php if (!empty($prescription['additional_instruction'])): ?>
+                                            <p><span class="label">Additional Instructions:</span> <?= htmlspecialchars($prescription['additional_instruction']) ?></p>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="prescription-footer d-flex justify-content-between">
+                                <a href="prescription.php" class="btn btn-secondary btn-sm">
+                                    <i class="fas fa-arrow-left"></i> Back to List
+                                </a>
+
+                                <?php if ($prescription['status'] === 'active'): ?>
+                                    <div>
+                                        <form method="post" class="d-inline">
+                                            <input type="hidden" name="action" value="complete">
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                <i class="fas fa-check"></i> Mark as Completed
+                                            </button>
+                                        </form>
+                                        <form method="post" class="d-inline">
+                                            <input type="hidden" name="action" value="cancel">
+                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                <i class="fas fa-times"></i> Cancel Prescription
+                                            </button>
+                                        </form>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -313,20 +334,8 @@ $prescriptions = $prescriptionModel->getAll();
             <!-- /.container-fluid -->
         </div>
         <!-- End of Main Content -->
-
-        <!-- Footer -->
-        <!-- <footer class="sticky-footer bg-white">
-            <div class="container my-auto">
-                <div class="copyright text-center my-auto">
-                    <span>Copyright &copy; Your Website 2021</span>
-                </div>
-            </div>
-        </footer> -->
-        <!-- End of Footer -->
-
     </div>
     <!-- End of Content Wrapper -->
-
 </div>
 <!-- End of Page Wrapper -->
 
@@ -364,14 +373,5 @@ $prescriptions = $prescriptionModel->getAll();
 
 <!-- Custom scripts for all pages-->
 <script src="js/sb-admin-2.min.js"></script>
-
-<!-- Page level plugins -->
-<script src="vendor/chart.js/Chart.min.js"></script>
-
-<!-- Page level custom scripts -->
-<script src="js/demo/chart-area-demo.js"></script>
-<script src="js/demo/chart-pie-demo.js"></script>
-
 </body>
-
 </html>

@@ -70,10 +70,10 @@ class Appointment
         }
     }
 
-    public function bookAppointment($patientData, $appointmentData)
+    public function bookAppointment($patientData, $appointmentData, $updateExisting = false)
     {
         try {
-            $query = "CALL BookAppointment(?, ?, ?, ?, ?, ?, ?, ?)";
+            $query = "CALL BookAppointment(?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $this->conn->prepare($query);
             $stmt->execute([
                 $patientData['first_name'],
@@ -83,7 +83,8 @@ class Appointment
                 $appointmentData['staff_id'],
                 $appointmentData['appointment_date'],
                 $appointmentData['appointment_time'],
-                $appointmentData['reason']
+                $appointmentData['reason'],
+                $updateExisting
             ]);
 
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
